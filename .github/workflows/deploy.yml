@@ -1,0 +1,67 @@
+name: CI/CD Pipeline - Restaurante
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch: 
+
+jobs:
+  # Etapa 1: Linting (Análisis de código estático)
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+      - name: Instalar dependencias
+        run: |
+          python -m pip install --upgrade pip
+          pip install flake8
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+      - name: Ejecutar Linter (Flake8)
+        run: flake8 . --count --select=E9,F82 --show-source --statistics
+
+  # Etapa 2: Pruebas Unitarias
+  test:
+    needs: lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+      - name: Instalar dependencias
+        run: |
+          pip install -r requirements.txt
+          pip install pytest pytest-cov
+      - name: Ejecutar pruebas
+        run: |
+          if [ -d "tests" ]; then pytest; else echo "⚠️ No hay carpeta tests/. Omitiendo pruebas por ahora."; fi
+
+  # Etapa 3: Seguridad (Escaneo de dependencias)
+  security:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+      - name: Instalar Safety (Escáner de vulnerabilidades)
+        run: pip install safety
+      - name: Escanear dependencias
+        run: safety check -r requirements.txt
+
+  # Etapa 4: Despliegue a Staging (Simulado)
+  deploy-staging:
+    needs: security
+    runs-on: ubuntu-latest
+    steps:
+      - name: Simular Despliegue
+        run: echo "✅ Desplegando la aplicación Flask (Restaurante) al entorno de Staging..."
